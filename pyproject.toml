@@ -9,7 +9,7 @@ description = ''
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
-keywords = []
+keywords = ["package version management", "version bump"]
 authors = [
   { name = "phdenzel", email = "phdenzel@gmail.com" },
 ]
