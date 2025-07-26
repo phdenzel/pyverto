@@ -7,7 +7,7 @@ name = "pyverto"
 dynamic = ["version"]
 description = "A python package version management tool."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = ["package version management", "version bump"]
 authors = [
@@ -16,8 +16,6 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -39,7 +37,6 @@ Source = "https://github.com/phdenzel/pyverto"
 
 [dependency-groups]
 dev = [
-    "hatch>=1.14.1",
     "pytest>=8.3.5",
     "pytest-cov>=5.0.0",
     "ruff>=0.12.5",
@@ -52,12 +49,9 @@ path = "src/pyverto/__about__.py"
 exclude = [
   ".github",
   "tests",
-  "*.yml",
   "uv.lock",
   ".python-version",
   ".coverage",
-  "Dockerfile",
-  "entrypoint.sh",
 ]
 
 [tool.hatch.envs.types]
