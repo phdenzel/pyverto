@@ -23,6 +23,7 @@ Usage:
   pyverto [command] [--commit] [-h]
 
 Commands:
+  version    Show current version
   release    Remove any pre-release/dev/post suffix (finalize version)
   major      Increment the major version
   minor      Increment the minor version
