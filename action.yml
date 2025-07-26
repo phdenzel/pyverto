@@ -1,0 +1,58 @@
+# Action running pyverto version bump on checkout repository
+#   Usage in a workflow yaml file:
+#   - uses: actions/checkout@v4
+#     with:
+#       ref: ${{ github.base_ref }}
+#       fetch-depth: 0
+#       token: ${{ secrets.READ_WRITE_PAT }}
+#   - uses: phdenzel/pyverto@v0.1.3
+#     with:
+#       type: "micro"
+#       ref: ${{ github.base_ref }}
+#       github-token: ${{ secrets.READ_WRITE_PAT }}
+#       tag: true
+#       force: true
+
+
+name: pyverto
+description: Bumps python projects in CI
+author: phdenzel
+branding:
+  icon: arrow-up-circle
+  color: gray-dark
+
+inputs:
+  type:
+    description: "Type of the package version bump"
+    type: string
+    default: "dev"
+    required: false
+  ref:
+    description: ""
+    type: string
+    default: ""
+    required: false
+  github-token:
+    description: "GitHub or personal access token"
+    default: ${{ github.token }}
+    required: false
+  force:
+    description: "Force push (with lease) the version bump"
+    type: boolean
+    default: false
+    required: false
+  tag:
+    description: "Tag the new commit"
+    type: boolean
+    default: true
+    required: false
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.type }}
+    - ${{ inputs.ref }}
+    - ${{ inputs.github-token }}
+    - ${{ inputs.force }}
+    - ${{ inputs.tag }}
