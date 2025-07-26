@@ -78,7 +78,7 @@ def format_version(
     num: int | None = None,
     post: int | None = None,
 ):
-    """Format a version tuple string corresponding to the version tuple. """
+    """Format a version tuple string corresponding to the version tuple."""
     v = f"{major}.{minor}.{micro}"
     if label:
         v += f"-{label}{num if num is not None else 0}"

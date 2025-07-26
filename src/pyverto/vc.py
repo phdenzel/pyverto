@@ -20,6 +20,5 @@ def git_commit_and_tag(
     if old_version is None:
         old_version = ""
     repo.index.commit(f"Bump version: {old_version} → {version}")
-    print(f"Bump version: {old_version} → {version}")
     repo.create_tag(f"v{version}")
     print(f"Committed and tagged v{version}")

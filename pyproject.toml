@@ -40,6 +40,7 @@ Source = "https://github.com/phdenzel/pyverto"
 dev = [
     "hatch>=1.14.1",
     "pytest>=8.3.5",
+    "pytest-cov>=5.0.0",
 ]
 
 [tool.hatch.version]
@@ -52,6 +53,22 @@ extra-dependencies = [
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {args:src/pyverto tests}"
 
+# Linting, flaking, etc.
+[tool.ruff]
+line-length = 100
+lint.select = ["E", "F", "D"]  # "D" includes pydocstyle rules
+lint.ignore = ["D200", "D212", "D415"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+
+# Testing & coverage
 [tool.coverage.run]
 source_pkgs = ["pyverto", "tests"]
 branch = true

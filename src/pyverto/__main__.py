@@ -92,6 +92,7 @@ def bump(command: str, current_version: str):
 
 
 def main():
+    """Main entry point."""
     args = parse_args()
     version_file = find_version_file()
     if not version_file:
