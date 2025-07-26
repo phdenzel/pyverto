@@ -43,7 +43,7 @@ Examples:
 ## Usage in GitHub Actions
 
 ```yaml
-- uses: phdenzel/pyverto@v0.1.3
+- uses: phdenzel/pyverto@v0.1.7
   with:
       bump-type: "minor"
 ```
