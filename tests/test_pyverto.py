@@ -163,6 +163,20 @@ def test_git_commit_and_tag_success(monkeypatch, temp_version_file, capfd):
     repo_mock.create_tag.assert_called_with("v2.0.0")
 
 
+def test_git_commit_and_tag_success_no_tag(monkeypatch, temp_version_file, capfd):
+    """Test `git_commit_and_tag` case: valid input."""
+    repo_mock = MagicMock()
+    monkeypatch.setattr(vc, "Repo", lambda *a, **kw: repo_mock)
+
+    vc.git_commit_and_tag(temp_version_file, "2.0.0", "1.0.0", tag=False)
+    out, err = capfd.readouterr()
+    assert "2.0.0" in out
+
+    repo_mock.index.add.assert_called_with([str(temp_version_file)])
+    repo_mock.index.commit.assert_called_once()
+    repo_mock.create_tag.assert_not_called()
+
+
 def test_git_commit_and_tag_missing_old_version(monkeypatch, temp_version_file, capfd):
     """Test `git_commit_and_tag` case: valid input."""
     repo_mock = MagicMock()
@@ -204,7 +218,7 @@ def test_main_function_current_version(capfd):
         
 
 def test_main_function_bumps_and_commits(capfd):
-    """Test `main` case: valid bump + commit."""
+    """Test `main` case: valid bump + commit + tag."""
     fake_version_file = Path("fake_pkg/__about__.py")
 
     # Patch dependencies used inside main()
