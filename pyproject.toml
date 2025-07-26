@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pyverto"
 dynamic = ["version"]
-description = ''
+description = "A python package version management tool."
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
