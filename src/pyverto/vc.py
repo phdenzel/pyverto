@@ -8,7 +8,7 @@ from git import Repo, InvalidGitRepositoryError
 
 
 def git_commit_and_tag(
-    version_file: Path, version: str, old_version: str | None = None
+        version_file: Path, version: str, old_version: str | None = None, tag: bool = True,
 ):
     """Commit the version file and tag with new version."""
     try:
@@ -20,5 +20,6 @@ def git_commit_and_tag(
     if old_version is None:
         old_version = ""
     repo.index.commit(f"Bump version: {old_version} → {version}")
-    repo.create_tag(f"v{version}")
-    print(f"Committed and tagged v{version}")
+    if tag:
+        repo.create_tag(f"v{version}")
+    print(f"Committed{' and tagged ' if tag else ' '} v{version}")
