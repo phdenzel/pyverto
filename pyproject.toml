@@ -49,12 +49,9 @@ path = "src/pyverto/__about__.py"
 exclude = [
   ".github",
   "tests",
-  "*.yml",
   "uv.lock",
   ".python-version",
   ".coverage",
-  "Dockerfile",
-  "entrypoint.sh",
 ]
 
 [tool.hatch.envs.types]
