@@ -28,15 +28,6 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 git reset --hard
 
-
-# Authenticate
-if [ -n "$github_token" ]; then
-    curl --request GET \
-         --url "https://api.github.com/repos/${GITHUB_REPOSITORY}" \
-         --header "Authorization: token $github_token"
-fi
-
-
 # Bump version
 VERSION=`pyverto version`
 case $bump_type in
@@ -69,6 +60,11 @@ if [ "$VERSION" != "$NEW_VERSION" ]; then
 
     # Push the new version
     git remote -v
+
+    # Authenticate
+    if [ -n "$github_token" ]; then
+	git remote set-url origin "https://${GITHUB_ACTOR}:${github_token}@github.com/${GITHUB_REPOSITORY}.git"
+    fi
 
     # Force push?
     if [ "$force_push" = true ]; then
