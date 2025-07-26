@@ -54,7 +54,7 @@ jobs:
         run: >-
           gh release create ${{ env.RELEASE_TAG }}
           --repo '${{ github.repository }}'
-          --notes ""
+          --generate-notes
 
       - name: 🚀 GitHub Release
         env:
