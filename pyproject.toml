@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -41,6 +42,7 @@ dev = [
     "hatch>=1.14.1",
     "pytest>=8.3.5",
     "pytest-cov>=5.0.0",
+    "ruff>=0.12.5",
 ]
 
 [tool.hatch.version]
