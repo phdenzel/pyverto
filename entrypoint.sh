@@ -58,12 +58,13 @@ NEW_VERSION=`pyverto version`
 if [ "$VERSION" != "$NEW_VERSION" ]; then
     echo "🟢 Success: bump version: $VERSION → $NEW_VERSION"
 
-    # Push the new version
+    # Check remotes
     git remote -v
 
     # Authenticate
     if [ -n "$github_token" ]; then
-	git remote set-url origin "https://${GITHUB_ACTOR}:${github_token}@github.com/${GITHUB_REPOSITORY}.git"
+	SANITIZED_TOKEN=$(echo -n "$github_token" | tr -d '\n')
+	git remote set-url origin "https://${GITHUB_ACTOR}:${SANITIZED_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
     fi
 
     # Force push?
@@ -73,11 +74,11 @@ if [ "$VERSION" != "$NEW_VERSION" ]; then
         PUSH_FLAGS=""
     fi
 
-    # Push
+    # Push the new version
     if [ -n "$ref_branch" ]; then
-        git push origin HEAD:$ref_branch $PUSH_FLAGS
+        git push origin HEAD:"$ref_branch" $PUSH_FLAGS
     elif [ -n "$GITHUB_HEAD_REF" ]; then
-        git push origin HEAD:$GITHUB_HEAD_REF $PUSH_FLAGS
+        git push origin HEAD:"$GITHUB_HEAD_REF" $PUSH_FLAGS
     else
         git push $PUSH_FLAGS
     fi
