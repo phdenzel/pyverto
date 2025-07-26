@@ -55,6 +55,7 @@ def parse_args():
         help="Version bump type",
     )
     parser.add_argument("--commit", action="store_true", help="Commit & tag in git")
+    parser.add_argument("--no-tag", action="store_true", help="Do not tag when committing")
     args = parser.parse_args()
     return args
 
@@ -109,7 +110,7 @@ def main():
         write_version(version_file, new_version)
         print(f"Bumped version in {version_file}: {current_version} → {new_version}")
         if args.commit:
-            git_commit_and_tag(version_file, new_version, current_version)
+            git_commit_and_tag(version_file, new_version, current_version, tag=(not args.no_tag))
 
 
 if __name__ == "__main__":

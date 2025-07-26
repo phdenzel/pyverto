@@ -231,13 +231,43 @@ def test_main_function_bumps_and_commits(capfd):
         # Simulate CLI arguments: bump "minor" and commit
         mock_args.return_value.command = "minor"
         mock_args.return_value.commit = True
+        mock_args.return_value.no_tag = False
 
         # Run main()
         main_mod.main()
 
         # Assertions
         mock_write.assert_called_once_with(fake_version_file, "1.1.0")
-        mock_git.assert_called_once_with(fake_version_file, "1.1.0", "1.0.0")
+        mock_git.assert_called_once_with(fake_version_file, "1.1.0", "1.0.0", tag=True)
+
+        # Capture printed output
+        out, err = capfd.readouterr()
+        assert "Bumped version in" in out
+        assert "1.0.0 → 1.1.0" in out
+
+
+def test_main_function_bumps_and_commits_not_tag(capfd):
+    """Test `main` case: valid bump + commit (not tag)."""
+    fake_version_file = Path("fake_pkg/__about__.py")
+
+    # Patch dependencies used inside main()
+    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
+         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
+         patch.object(main_mod, "write_version") as mock_write, \
+         patch.object(main_mod, "git_commit_and_tag") as mock_git, \
+         patch.object(main_mod, "parse_args") as mock_args:
+        
+        # Simulate CLI arguments: bump "minor" and commit
+        mock_args.return_value.command = "minor"
+        mock_args.return_value.commit = True
+        mock_args.return_value.no_tag = True
+
+        # Run main()
+        main_mod.main()
+
+        # Assertions
+        mock_write.assert_called_once_with(fake_version_file, "1.1.0")
+        mock_git.assert_called_once_with(fake_version_file, "1.1.0", "1.0.0", tag=False)
 
         # Capture printed output
         out, err = capfd.readouterr()
