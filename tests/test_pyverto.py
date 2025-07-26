@@ -122,6 +122,7 @@ def test_parse_args_without_commit(monkeypatch):
 @pytest.mark.parametrize(
     "cmd,current,expected",
     [
+        ("version", "1.2.3-dev2", "1.2.3-dev2"),
         ("release", "1.2.3-dev2", "1.2.3"),
         ("major", "1.2.3", "2.0.0"),
         ("minor", "1.2.3", "1.3.0"),
@@ -182,6 +183,25 @@ def test_git_commit_and_tag_not_a_repo(monkeypatch, temp_version_file):
     with pytest.raises(SystemExit):
         vc.git_commit_and_tag(temp_version_file, "2.0.0")
 
+def test_main_function_current_version(capfd):
+    """Test `main` case: valid version."""
+    fake_version_file = Path("fake_pkg/__about__.py")
+
+    # Patch dependencies used inside main()
+    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
+         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
+         patch.object(main_mod, "parse_args") as mock_args:
+        
+        # Simulate CLI arguments: "version"
+        mock_args.return_value.command = "version"
+
+        # Run main()
+        main_mod.main()
+
+        # Capture printed output
+        out, err = capfd.readouterr()
+        assert "1.0.0" in out
+        
 
 def test_main_function_bumps_and_commits(capfd):
     """Test `main` case: valid bump + commit."""

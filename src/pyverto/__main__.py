@@ -8,6 +8,7 @@ Usage:
   pyverto [command] [--commit]
 
 Commands:
+  version    Print out current version
   release    Remove any pre-release/dev/post suffix (finalize version)
   major      Increment the major version
   minor      Increment the minor version
@@ -40,6 +41,7 @@ def parse_args():
     parser.add_argument(
         "command",
         choices=[
+            "version",
             "release",
             "major",
             "minor",
@@ -65,6 +67,8 @@ def bump(command: str, current_version: str):
         current_version: Version string to be incremented.
     """
     major, minor, micro, label, num, post = parse_version(current_version)
+    if command == "version":
+        return format_version(major, minor, micro, label, num, post)
     if command == "release":
         return format_version(major, minor, micro)
     if command == "major":
@@ -98,11 +102,14 @@ def main():
     if not version_file:
         raise SystemExit("Error: Could not locate a file with __version__.")
     current_version = get_current_version(version_file)
-    new_version = bump(args.command, current_version)
-    write_version(version_file, new_version)
-    print(f"Bumped version in {version_file}: {current_version} → {new_version}")
-    if args.commit:
-        git_commit_and_tag(version_file, new_version, current_version)
+    if args.command == "version":
+        print(current_version)
+    else:
+        new_version = bump(args.command, current_version)
+        write_version(version_file, new_version)
+        print(f"Bumped version in {version_file}: {current_version} → {new_version}")
+        if args.commit:
+            git_commit_and_tag(version_file, new_version, current_version)
 
 
 if __name__ == "__main__":

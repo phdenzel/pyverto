@@ -2,4 +2,4 @@
 #
 # SPDX-License-Identifier: MIT
 """Dynamic versioning."""
-__version__ = "0.1.2"
+__version__ = "0.1.3"
