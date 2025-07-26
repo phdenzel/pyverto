@@ -37,6 +37,16 @@ Examples:
   - `pyverto minor`: 0.0.1 → 0.1.0
   - `pyverto dev`: 0.1.0 → 0.1.0-dev0
   - `pyverto pre --commit`: 0.1.0-dev0 → 0.1.0-rc0
+  
+  
+## Usage in GitHub Actions
+
+```yaml
+- uses: phdenzel/pyverto@v0.1.1
+  with:
+      bump-type: "minor"
+```
+
 
 ## License
 
