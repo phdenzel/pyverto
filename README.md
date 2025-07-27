@@ -2,6 +2,7 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/pyverto.svg)](https://pypi.org/project/pyverto)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyverto.svg)](https://pypi.org/project/pyverto)
+ [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/github/phdenzel/pyverto/graph/badge.svg?token=QEAZAPPG71)](https://codecov.io/github/phdenzel/pyverto)
 
 -----
