@@ -47,8 +47,8 @@ Examples:
 ```yaml
 - uses: phdenzel/pyverto@v0.1.8
   with:
-      bump-type: "minor"
-	  ref: ${{ github.base_ref }}
+    bump-type: "minor"
+    ref: ${{ github.base_ref }}
 ```
 
 
