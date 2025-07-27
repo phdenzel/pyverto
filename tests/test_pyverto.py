@@ -5,12 +5,24 @@
 
 import sys
 import re
+import textwrap
 from pathlib import Path
+from git import Repo
 from unittest.mock import MagicMock, patch
 import pytest
 from pyverto import utils
 from pyverto import vc
+from pyverto import header
 import pyverto.__main__ as main_mod
+
+
+def test_version_string_is_defined():
+    """Ensure __version__ string is defined."""
+    from pyverto import __about__
+
+    # Ensure __version__ exists and is a non-empty string
+    assert isinstance(__about__.__version__, str)
+    assert __about__.__version__.strip() != ""
 
 
 @pytest.fixture
@@ -19,14 +31,6 @@ def temp_version_file(tmp_path):
     f = tmp_path / "__about__.py"
     f.write_text('__version__ = "1.2.3"')
     return f
-
-
-def test_version_string_is_defined():
-    """Ensure __version__ string is defined."""
-    from pyverto import __about__
-    # Ensure __version__ exists and is a non-empty string
-    assert isinstance(__about__.__version__, str)
-    assert __about__.__version__.strip() != ""
 
 
 @pytest.fixture
@@ -205,15 +209,249 @@ def test_git_commit_and_tag_not_a_repo(monkeypatch, temp_version_file):
     with pytest.raises(SystemExit):
         vc.git_commit_and_tag(temp_version_file, "2.0.0")
 
+
+def test_project_name_from_pyproject(tmp_path):
+    """Test `get_project_name` case: pyproject.toml"""
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""
+    [project]
+    name = "my-project"
+    """)
+    )
+    assert header.get_project_name(tmp_path) == "my-project"
+
+
+def test_project_name_from_setup_cfg_instead_pyproject(tmp_path):
+    """Test `get_project_name` case: setup.cfg"""
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""
+    [project]
+    notname = "my-project"
+    """)
+    )
+    setup_cfg = tmp_path / "setup.cfg"
+    setup_cfg.write_text(
+        textwrap.dedent("""
+    [metadata]
+    name = legacy-project
+    """)
+    )
+    assert header.get_project_name(tmp_path) == "legacy-project"
+    
+
+def test_project_name_from_setup_cfg(tmp_path):
+    """Test `get_project_name` case: setup.cfg"""
+    setup_cfg = tmp_path / "setup.cfg"
+    setup_cfg.write_text(
+        textwrap.dedent("""
+    [metadata]
+    name = legacy-project
+    """)
+    )
+    assert header.get_project_name(tmp_path) == "legacy-project"
+
+
+def test_project_name_from_src_package_instead_setup_cfg(tmp_path):
+    """Test `get_project_name` case: src/**"""
+    setup_cfg = tmp_path / "setup.cfg"
+    setup_cfg.write_text(
+        textwrap.dedent("""
+    [metadata]
+    noname = legacy-project
+    """)
+    )
+    src_dir = tmp_path / "src"
+    pkg_dir = src_dir / "realpkg"
+    pkg_dir.mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("# package")
+    assert header.get_project_name(tmp_path) == "realpkg"
+
+
+def test_project_name_from_flat_package(tmp_path):
+    """Test `get_project_name` case: src/flatpkg"""
+    pkg_dir = tmp_path / "flatpkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("# flat package")
+    assert header.get_project_name(tmp_path) == "flatpkg"
+
+
+def test_project_name_skips_tests_docs_examples(tmp_path):
+    """Test `get_project_name` case: actualpkg/"""
+    # These should be ignored as possible names
+    for name in ["tests", "docs", "examples"]:
+        d = tmp_path / name
+        d.mkdir()
+        (d / "__init__.py").write_text("# dummy")
+
+    real_pkg = tmp_path / "actualpkg"
+    real_pkg.mkdir()
+    (real_pkg / "__init__.py").write_text("# real package")
+
+    assert header.get_project_name(tmp_path) == "actualpkg"
+
+
+def test_project_name_from_git(monkeypatch, tmp_path):
+    """Test `get_project_name` case: git repo"""
+    repo_mock = MagicMock()
+    repo_dir = tmp_path / "reponame"
+    repo_dir.mkdir()
+    repo_mock.working_tree_dir = str(repo_dir)
+
+    # Patch Repo to return our fake repo
+    monkeypatch.setattr("pyverto.header.Repo", lambda *a, **kw: repo_mock)
+    monkeypatch.setattr("pyverto.header.InvalidGitRepositoryError", Exception)
+
+    # Remove pyproject/setup.cfg and no package dirs
+    print(Path(repo_mock.working_tree_dir).name)
+    assert header.get_project_name(tmp_path) == "reponame"
+
+
+def test_project_name_defaults_to_dir_name(monkeypatch, tmp_path):
+    """Test `get_project_name` case: base_path (last resort)"""
+    # Simulate no metadata and no git repo
+    monkeypatch.setattr("git.Repo", MagicMock(side_effect=Exception))
+    assert header.get_project_name(tmp_path) == tmp_path.name
+
+
+def test_project_name_prioritizes_pyproject_over_others(tmp_path):
+    """Test `get_project_name` case: pyproject.toml and others."""
+    # Set up multiple sources, should prefer pyproject.toml
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""
+    [project]
+    name = "preferred-project"
+    """)
+    )
+    setup_cfg = tmp_path / "setup.cfg"
+    setup_cfg.write_text("[metadata]\nname = other-project")
+    pkg_dir = tmp_path / "mypkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "__init__.py").write_text("# pkg")
+    assert header.get_project_name(tmp_path) == "preferred-project"
+
+
+def test_generate_default_header_reads_pyproject(tmp_path):
+    """Test `generate_default_header` case: defaults from pyproject.toml."""
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""\
+    [project]
+    name = "mytool"
+    authors = [{name = "Jane Doe", email = "jane@example.com"}]
+    license = { text = "MIT" }
+    """)
+    )
+    hdr = header.generate_default_header(pyproj)
+    assert "Jane Doe" in hdr
+    assert "jane@example.com" in hdr
+    assert "MIT" in hdr
+
+
+def test_generate_default_header_reads_pyproject_no_authors(tmp_path):
+    """Test `generate_default_header` case: defaults from pyproject.toml."""
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""\
+    [project]
+    name = "mytool"
+    license = { text = "MIT" }
+    """)
+    )
+    hdr = header.generate_default_header(pyproj)
+    print(hdr)
+    assert "author" in hdr
+    assert "author@example.com" in hdr
+    assert "MIT" in hdr
+    
+
+def test_generate_default_header_reads_pyproject_alt_license(tmp_path):
+    """Test `generate_default_header` case: defaults from pyproject.toml."""
+    pyproj = tmp_path / "pyproject.toml"
+    pyproj.write_text(
+        textwrap.dedent("""\
+    [project]
+    name = "mytool"
+    authors = [{name = "Jane Doe", email = "jane@example.com"}]
+    license = "MIT"
+    """)
+    )
+    hdr = header.generate_default_header(pyproj)
+    assert "Jane Doe" in hdr
+    assert "MIT" in hdr
+
+
+def test_insert_header_with_shebang_and_docstring(tmp_path):
+    """Test `insert_header` case: shebang + docstring."""
+    src = tmp_path / "test.py"
+    original_text = textwrap.dedent("""\
+    #!/usr/bin/env python3
+    \"\"\"Module docstring\"\"\"
+
+    print("hi")
+    """)
+    src.write_text(original_text)
+    header_txt = "# SPDX-License-Identifier: MIT"
+    header.insert_header(src, header_txt)
+    text = src.read_text()
+    # Header must be after shebang but before docstring
+    lines = text.splitlines()
+    print()
+    print("-"*5)
+    print(original_text)
+    print("-"*5)
+    print(text)
+    assert lines[0].startswith("#!")
+    assert lines[1] == header_txt
+
+
+def test_insert_header_replaces_existing_spdx(tmp_path):
+    """Test `insert_header` case: replace existing spdx header."""
+    src = tmp_path / "test.py"
+    original_text = textwrap.dedent("""\
+    # SPDX-License-Identifier: Apache-2.0
+    print("hi")
+    """)
+    src.write_text(original_text)
+    new_header = "# SPDX-License-Identifier: MIT"
+    header.insert_header(src, new_header)
+    text = src.read_text()
+    print()
+    print("-"*5)
+    print(original_text)
+    print("-"*5)
+    print(text)
+    assert text.startswith(new_header)
+    assert "Apache-2.0" not in text
+
+
+def test_insert_header_no_shebang_or_docstring(tmp_path):
+    """Test `insert_header` case: no shebang, no docstring."""
+    src = tmp_path / "test.py"
+    original_text = "print('hello')\n" 
+    src.write_text(original_text)
+    header.insert_header(src, "# HEADER")
+    text = src.read_text()
+    print()
+    print("-"*5)
+    print(original_text)
+    print("-"*5)
+    print(text)
+    assert text.startswith("# HEADER\nprint(")
+
+
 def test_main_function_current_version(capfd):
     """Test `main` case: valid version."""
     fake_version_file = Path("fake_pkg/__about__.py")
 
     # Patch dependencies used inside main()
-    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
-         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
-         patch.object(main_mod, "parse_args") as mock_args:
-        
+    with (
+        patch.object(main_mod, "find_version_file", return_value=fake_version_file),
+        patch.object(main_mod, "get_current_version", return_value="1.0.0"),
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
         # Simulate CLI arguments: "version"
         mock_args.return_value.command = "version"
 
@@ -223,23 +461,25 @@ def test_main_function_current_version(capfd):
         # Capture printed output
         out, err = capfd.readouterr()
         assert "1.0.0" in out
-        
+
 
 def test_main_function_bumps_and_commits(capfd):
     """Test `main` case: valid bump + commit + tag."""
     fake_version_file = Path("fake_pkg/__about__.py")
 
     # Patch dependencies used inside main()
-    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
-         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
-         patch.object(main_mod, "write_version") as mock_write, \
-         patch.object(main_mod, "git_commit_and_tag") as mock_git, \
-         patch.object(main_mod, "parse_args") as mock_args:
-        
+    with (
+        patch.object(main_mod, "find_version_file", return_value=fake_version_file),
+        patch.object(main_mod, "get_current_version", return_value="1.0.0"),
+        patch.object(main_mod, "write_version") as mock_write,
+        patch.object(main_mod, "git_commit_and_tag") as mock_git,
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
         # Simulate CLI arguments: bump "minor" and commit
         mock_args.return_value.command = "minor"
         mock_args.return_value.commit = True
         mock_args.return_value.no_tag = False
+        mock_args.return_value.dry_run = False
 
         # Run main()
         main_mod.main()
@@ -259,16 +499,18 @@ def test_main_function_bumps_and_commits_not_tag(capfd):
     fake_version_file = Path("fake_pkg/__about__.py")
 
     # Patch dependencies used inside main()
-    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
-         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
-         patch.object(main_mod, "write_version") as mock_write, \
-         patch.object(main_mod, "git_commit_and_tag") as mock_git, \
-         patch.object(main_mod, "parse_args") as mock_args:
-        
+    with (
+        patch.object(main_mod, "find_version_file", return_value=fake_version_file),
+        patch.object(main_mod, "get_current_version", return_value="1.0.0"),
+        patch.object(main_mod, "write_version") as mock_write,
+        patch.object(main_mod, "git_commit_and_tag") as mock_git,
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
         # Simulate CLI arguments: bump "minor" and commit
         mock_args.return_value.command = "minor"
         mock_args.return_value.commit = True
         mock_args.return_value.no_tag = True
+        mock_args.return_value.dry_run = False
 
         # Run main()
         main_mod.main()
@@ -288,14 +530,16 @@ def test_main_function_bumps_no_commit(capfd):
     fake_version_file = Path("fake_pkg/__about__.py")
 
     # Patch dependencies used inside main()
-    with patch.object(main_mod, "find_version_file", return_value=fake_version_file), \
-         patch.object(main_mod, "get_current_version", return_value="1.0.0"), \
-         patch.object(main_mod, "write_version") as mock_write, \
-         patch.object(main_mod, "parse_args") as mock_args:
-        
+    with (
+        patch.object(main_mod, "find_version_file", return_value=fake_version_file),
+        patch.object(main_mod, "get_current_version", return_value="1.0.0"),
+        patch.object(main_mod, "write_version") as mock_write,
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
         # Simulate CLI arguments: bump "minor" and commit
         mock_args.return_value.command = "minor"
         mock_args.return_value.commit = False
+        mock_args.return_value.dry_run = False
 
         # Run main()
         main_mod.main()
@@ -312,9 +556,10 @@ def test_main_function_bumps_no_commit(capfd):
 def test_main_function_exit_syserr(capfd):
     """Test `main` case: valid run."""
     # Patch dependencies used inside main()
-    with patch.object(main_mod, "find_version_file", return_value=None), \
-         patch.object(main_mod, "parse_args") as mock_args:
-        
+    with (
+        patch.object(main_mod, "find_version_file", return_value=None),
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
         # Simulate CLI arbitrary arguments
         mock_args.return_value.command = "minor"
         mock_args.return_value.commit = False
