@@ -2,4 +2,4 @@
 # SPDX-FileNotice: Part of pyverto. Distributed as-is with no warranty.
 # SPDX-License-Identifier: MIT
 """Dynamic versioning."""
-__version__ = "0.1.8-dev2"
+__version__ = "0.1.8-dev3"
