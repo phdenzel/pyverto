@@ -21,6 +21,14 @@ def temp_version_file(tmp_path):
     return f
 
 
+def test_version_string_is_defined():
+    """Ensure __version__ string is defined."""
+    from pyverto import __about__
+    # Ensure __version__ exists and is a non-empty string
+    assert isinstance(__about__.__version__, str)
+    assert __about__.__version__.strip() != ""
+
+
 @pytest.fixture
 def temp_init_file(tmp_path):
     """Set up temporary mypkg/__init__.py with a __version__ variable."""
