@@ -5,14 +5,16 @@
 
 import sys
 import re
+import types
 import textwrap
 from pathlib import Path
-from git import Repo
+import importlib
+import builtins
 from unittest.mock import MagicMock, patch
 import pytest
-from pyverto import utils
-from pyverto import vc
-from pyverto import header
+import pyverto.utils as utils
+import pyverto.vc as vc
+import pyverto.header as header
 import pyverto.__main__ as main_mod
 
 
@@ -208,6 +210,71 @@ def test_git_commit_and_tag_not_a_repo(monkeypatch, temp_version_file):
     monkeypatch.setattr(vc, "Repo", MagicMock(side_effect=vc.InvalidGitRepositoryError))
     with pytest.raises(SystemExit):
         vc.git_commit_and_tag(temp_version_file, "2.0.0")
+
+
+def _patch_import(monkeypatch, missing=(), tomllib_fake=None, tomli_fake=None):
+    """Helper to patch import behavior for tomllib/tomli."""
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name in missing:
+            raise ImportError(f"Simulated missing {name}")
+        return real_import(name, *args, **kwargs)
+
+    builtins.__import__ = fake_import
+
+    # Inject fake modules if provided
+    if tomllib_fake:
+        monkeypatch.setitem(sys.modules, "tomllib", tomllib_fake)
+    else:
+        sys.modules.pop("tomllib", None)
+
+    if tomli_fake:
+        monkeypatch.setitem(sys.modules, "tomli", tomli_fake)
+    else:
+        sys.modules.pop("tomli", None)
+
+    # Reload utils so it picks up this environment
+    importlib.reload(utils)
+    return real_import
+
+
+def test_load_tomllib_prefers_tomllib(monkeypatch):
+    """Test `load_tomllib` case: tomllib available."""
+    fake_tomllib = types.SimpleNamespace(loads=lambda _: {"ok": True})
+    real_import = _patch_import(monkeypatch, missing=("tomli",), tomllib_fake=fake_tomllib)
+
+    try:
+        mod = utils.load_tomllib()
+        assert mod is fake_tomllib
+        assert mod.loads("dummy") == {"ok": True}
+    finally:
+        builtins.__import__ = real_import
+
+
+def test_load_tomllib_falls_back_to_tomli(monkeypatch):
+    """Test `load_tomllib` case: tomli available."""
+    fake_tomli = types.SimpleNamespace(loads=lambda _: {"fallback": True})
+    real_import = _patch_import(monkeypatch, missing=("tomllib",), tomli_fake=fake_tomli)
+
+    try:
+        mod = utils.load_tomllib()
+        assert mod is fake_tomli
+        assert mod.loads("dummy") == {"fallback": True}
+    finally:
+        builtins.__import__ = real_import
+
+
+def test_load_tomllib_raises_if_both_missing(monkeypatch):
+    """Test `load_tomllib` case: none availble."""
+    real_import = _patch_import(monkeypatch, missing=("tomllib", "tomli"))
+
+    try:
+        with pytest.raises(SystemExit) as excinfo:
+            utils.load_tomllib()
+        assert "tomllib or tomli" in str(excinfo.value)
+    finally:
+        builtins.__import__ = real_import
 
 
 def test_project_name_from_pyproject(tmp_path):

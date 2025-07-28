@@ -6,16 +6,8 @@
 import datetime
 from pathlib import Path
 from git import Repo, InvalidGitRepositoryError
-
-try:
-    import tomllib
-except ImportError:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        raise SystemExit(
-            "Error: This program requires either tomllib or tomli but neither is available"
-        )
+from pyverto.utils import load_tomllib
+tomllib = load_tomllib()
 
 
 IGNORED_DIRS = {"tests", "test", "docs", "examples", "scripts", "dist", ".github", ".venv", "venv"}
