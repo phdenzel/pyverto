@@ -45,7 +45,7 @@ Examples:
 ## Usage in GitHub Actions
 
 ```yaml
-- uses: phdenzel/pyverto@v0.1.9
+- uses: phdenzel/pyverto@v0.1.10
   with:
     bump-type: "minor"
     ref: ${{ github.base_ref }}

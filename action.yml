@@ -5,7 +5,7 @@
 #       ref: ${{ github.base_ref }}
 #       fetch-depth: 0
 #       token: ${{ secrets.READ_WRITE_PAT }}
-#   - uses: phdenzel/pyverto@v0.1.9
+#   - uses: phdenzel/pyverto@v0.1.10
 #     with:
 #       type: "micro"
 #       ref: ${{ github.base_ref }}
