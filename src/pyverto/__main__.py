@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # SPDX-FileCopyrightText: 2025-present phdenzel <phdenzel@gmail.com>
-# SPDX-FileNotice: Part of pyverto. Distributed as-is with no warranty.
+# SPDX-FileNotice: Part of pyverto
 # SPDX-License-Identifier: MIT
 """Version management for any Python project.
 
@@ -25,6 +25,7 @@ Examples:
 """
 
 import argparse
+from pathlib import Path
 from pyverto.utils import (
     find_version_file,
     get_current_version,
@@ -33,6 +34,7 @@ from pyverto.utils import (
     format_version,
 )
 from pyverto.vc import git_commit_and_tag
+from pyverto.header import get_project_name, generate_default_header, insert_header
 
 
 def parse_args():
@@ -51,11 +53,29 @@ def parse_args():
             "pre",
             "rev",
             "dev",
+            "header",
         ],
         help="Version bump type",
     )
+    parser.add_argument(
+        "-n", "--dry-run", action="store_true", help="Dry-run, i.e. no changes are applied."
+    )
     parser.add_argument("--commit", action="store_true", help="Commit & tag in git")
     parser.add_argument("--no-tag", action="store_true", help="Do not tag when committing")
+    parser.add_argument(
+        "--header-file",
+        "--hdr-file",
+        type=Path,
+        help="Optional file containing a custom header to insert into project files.",
+    )
+    parser.add_argument(
+        "--header-text",
+        "--header-txt",
+        "--hdr-txt",
+        type=str,
+        help="Optional text containing a custom header to insert into project files.",
+    )
+
     args = parser.parse_args()
     return args
 
@@ -96,6 +116,34 @@ def bump(command: str, current_version: str):
     raise ValueError(f"Unknown command: {command}")
 
 
+def edit_header(
+    header_file: Path | None = None, header_text: str | None = None, dry_run: bool = False
+):
+    """Edit header of project files."""
+    pyproject = Path("pyproject.toml")
+    if header_file is not None:
+        header_text = header_file.read_text().strip()
+    elif header_text is not None:
+        header_text = header_text.strip()
+    else:
+        if not pyproject.exists():
+            raise SystemExit(
+                "pyproject.toml not found. "
+                "Use --header-file or --header-text flags to edit headers."
+            )
+        header_text = generate_default_header(pyproject)
+    project_name = get_project_name(pyproject.parent).replace("-", "_")
+    files = list(Path().rglob("src/**/*.py")) + list(Path().rglob(f"{project_name}/**/*.py"))
+    for py_file in files:
+        if py_file.name.startswith("."):
+            continue
+        if dry_run:
+            print(py_file)
+            print(header_text)
+        else:
+            insert_header(py_file, header_text)
+
+
 def main():
     """Main entry point."""
     args = parse_args()
@@ -103,13 +151,16 @@ def main():
     if not version_file:
         raise SystemExit("Error: Could not locate a file with __version__.")
     current_version = get_current_version(version_file)
-    if args.command == "version":
+    if args.command == "header":
+        edit_header(args.header_file, dry_run=args.dry_run)
+    elif args.command == "version":
         print(current_version)
     else:
         new_version = bump(args.command, current_version)
-        write_version(version_file, new_version)
+        if not args.dry_run:
+            write_version(version_file, new_version)
         print(f"Bumped version in {version_file}: {current_version} → {new_version}")
-        if args.commit:
+        if args.commit and not args.dry_run:
             git_commit_and_tag(version_file, new_version, current_version, tag=(not args.no_tag))
 
 

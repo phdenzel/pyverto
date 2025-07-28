@@ -1,11 +1,28 @@
 # SPDX-FileCopyrightText: 2025-present phdenzel <phdenzel@gmail.com>
-# SPDX-FileNotice: Part of pyverto. Distributed as-is with no warranty.
+# SPDX-FileNotice: Part of pyverto
 # SPDX-License-Identifier: MIT
 """Utility functions for locating, parsing, and writing __version__."""
 
 from pathlib import Path
 import re
 from pyverto.regexp import VERSION_RE
+
+
+def load_tomllib():
+    """Return a tomllib-compatible module (fallback for Python 3.10 is tomli)"""
+    try:
+        import tomllib
+
+        return tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib
+
+            return tomllib
+        except ImportError:
+            raise SystemExit(
+                "Error: This program requires either tomllib or tomli but neither is available"
+            )
 
 
 def find_version_file() -> Path | None:
@@ -27,9 +44,7 @@ def find_version_file() -> Path | None:
         candidates.extend(Path().glob(pattern))
 
     # Filter only those actually containing __version__
-    candidates = [
-        p for p in candidates if p.is_file() and "__version__" in p.read_text()
-    ]
+    candidates = [p for p in candidates if p.is_file() and "__version__" in p.read_text()]
 
     # Prefer __about__.py over __init__.py
     for p in candidates:

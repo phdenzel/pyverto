@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "gitpython>=3.1.45",
+    'tomli; python_version < "3.11"',
 ]
 
 [project.scripts]
