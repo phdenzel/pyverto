@@ -4,9 +4,18 @@
 """Manage headers in project files."""
 
 import datetime
-import tomllib
 from pathlib import Path
 from git import Repo, InvalidGitRepositoryError
+
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        raise SystemExit(
+            "Error: This program requires either tomllib or tomli but neither is available"
+        )
 
 
 IGNORED_DIRS = {"tests", "test", "docs", "examples", "scripts", "dist", ".github", ".venv", "venv"}
@@ -14,7 +23,7 @@ IGNORED_DIRS = {"tests", "test", "docs", "examples", "scripts", "dist", ".github
 
 def get_project_name(base_path: Path | str = ".") -> str | list[str]:
     """Extract the project name from pyproject.toml or other sources."""
-    base_path  = Path(base_path) if base_path is not None else Path(".")
+    base_path = Path(base_path) if base_path is not None else Path(".")
     pyproject = base_path / "pyproject.toml"
     setup_cfg = base_path / "setup.cfg"
     src_path = base_path / "src"
