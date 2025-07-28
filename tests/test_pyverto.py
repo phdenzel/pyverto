@@ -239,7 +239,7 @@ def test_project_name_from_setup_cfg_instead_pyproject(tmp_path):
     """)
     )
     assert header.get_project_name(tmp_path) == "legacy-project"
-    
+
 
 def test_project_name_from_setup_cfg(tmp_path):
     """Test `get_project_name` case: setup.cfg"""
@@ -365,7 +365,7 @@ def test_generate_default_header_reads_pyproject_no_authors(tmp_path):
     assert "author" in hdr
     assert "author@example.com" in hdr
     assert "MIT" in hdr
-    
+
 
 def test_generate_default_header_reads_pyproject_alt_license(tmp_path):
     """Test `generate_default_header` case: defaults from pyproject.toml."""
@@ -399,9 +399,9 @@ def test_insert_header_with_shebang_and_docstring(tmp_path):
     # Header must be after shebang but before docstring
     lines = text.splitlines()
     print()
-    print("-"*5)
+    print("-" * 5)
     print(original_text)
-    print("-"*5)
+    print("-" * 5)
     print(text)
     assert lines[0].startswith("#!")
     assert lines[1] == header_txt
@@ -419,9 +419,9 @@ def test_insert_header_replaces_existing_spdx(tmp_path):
     header.insert_header(src, new_header)
     text = src.read_text()
     print()
-    print("-"*5)
+    print("-" * 5)
     print(original_text)
-    print("-"*5)
+    print("-" * 5)
     print(text)
     assert text.startswith(new_header)
     assert "Apache-2.0" not in text
@@ -430,16 +430,157 @@ def test_insert_header_replaces_existing_spdx(tmp_path):
 def test_insert_header_no_shebang_or_docstring(tmp_path):
     """Test `insert_header` case: no shebang, no docstring."""
     src = tmp_path / "test.py"
-    original_text = "print('hello')\n" 
+    original_text = "print('hello')\n"
     src.write_text(original_text)
     header.insert_header(src, "# HEADER")
     text = src.read_text()
     print()
-    print("-"*5)
+    print("-" * 5)
     print(original_text)
-    print("-"*5)
+    print("-" * 5)
     print(text)
     assert text.startswith("# HEADER\nprint(")
+
+
+def test_edit_header_with_header_file(tmp_path):
+    """Test `edit_header` case: header_file."""
+    # Prepare a header file
+    header_file = tmp_path / "header.txt"
+    header_file.write_text("# Custom Header")
+
+    # Create a dummy Python file
+    pyfile = tmp_path / "src" / "pkg"
+    pyfile.mkdir(parents=True)
+    file_path = pyfile / "file.py"
+    file_path.write_text("print('hi')\n")
+
+    # Patch insert_header to verify it is called
+    with (
+        patch.object(main_mod, "insert_header") as mock_insert,
+    ):
+        main_mod.edit_header(header_file=header_file, dry_run=False)
+
+        mock_insert.assert_called_once()
+        called_file, called_header = mock_insert.call_args[0]
+        assert str(called_file).endswith("file.py")
+        assert called_header == "# Custom Header"
+
+
+def test_edit_header_with_direct_header_text(tmp_path):
+    """Test `edit_header` case: header_text."""
+    pyfile = tmp_path / "src" / "pkg"
+    pyfile.mkdir(parents=True)
+    file_path = pyfile / "file.py"
+    file_path.write_text("print('hi')\n")
+
+    # Patch insert_header to verify it is called
+    with (
+        patch.object(main_mod, "insert_header") as mock_insert,
+    ):
+        main_mod.edit_header(header_text="# Direct Header", dry_run=False)
+
+        mock_insert.assert_called_once()
+        called_file, called_header = mock_insert.call_args[0]
+        assert called_header == "# Direct Header"
+
+
+def test_edit_header_dry_run_prints_files_and_header(tmp_path, capfd):
+    """Test `edit_header` case: dry_run."""
+    pyfile = tmp_path / "src" / "pkg"
+    pyfile.mkdir(parents=True)
+    file_path = pyfile / "file.py"
+    file_path.write_text("print('hi')\n")
+
+    # Simulate default header by patching generate_default_header/get_project_name
+    with (
+        patch.object(main_mod, "generate_default_header", return_value="# Default Header"),
+        patch.object(main_mod, "insert_header") as mock_insert,
+    ):
+        main_mod.edit_header(dry_run=True)
+
+        mock_insert.assert_not_called()
+        out, _ = capfd.readouterr()
+        assert "file.py" in out
+        assert "# Default Header" in out
+
+
+def test_edit_header_skips_hidden_files(tmp_path, capfd):
+    """Test `edit_header` case: hidden files."""
+    pyfile = tmp_path / "src" / "pkg"
+    pyfile.mkdir(parents=True)
+    file_path = pyfile / "file.py"
+    file_path.write_text("print('hi')\n")
+    file_path2 = pyfile / ".hidden_file.py"
+    file_path2.write_text("print('easter_egg')\n")
+
+    # Simulate default header by patching generate_default_header/get_project_name
+    with (
+        patch.object(main_mod, "generate_default_header", return_value="# Default Header"),
+        patch.object(main_mod, "insert_header") as mock_insert,
+    ):
+        main_mod.edit_header(dry_run=True)
+
+        mock_insert.assert_not_called()
+        out, _ = capfd.readouterr()
+        assert "file.py" in out
+        assert ".hidden_file.py" not in out
+        assert "# Default Header" in out
+
+
+def test_edit_header_raises_without_pyproject(tmp_path):
+    """Test `edit_header` case: no pyproject failure."""
+    pkgpath = tmp_path / "src" / "pkg"
+    pkgpath.mkdir(parents=True)
+
+    def fake_exists(path_self):
+        return False
+
+    # No header_file, no header_text, and pyproject.toml missing
+    with (
+        patch("pyverto.header.get_project_name", return_value="pkg"),
+        patch("pathlib.Path.exists", new=fake_exists),
+        pytest.raises(SystemExit),
+    ):
+        main_mod.edit_header(None, None, dry_run=True)
+
+
+def test_edit_header_uses_generated_header(tmp_path):
+    """Test `edit_header` case: fake pyproject."""
+    # Create dummy pyproject.toml and Python file
+    fake_pyproj = tmp_path / "pyproject.toml"
+    original_text = textwrap.dedent("""
+    [project]
+    name = "mypkg"
+    authors = [{name = "John", email = "john@example.com"}]
+    license = {text = "MIT"}
+    """)
+    fake_pyproj.write_text(original_text)
+    pkg_dir = tmp_path / "mypkg"
+    pkg_dir.mkdir()
+    file_path = pkg_dir / "file.py"
+    file_path.write_text("print('hi')\n")
+
+    def fake_path(arg: str = None):
+        # If asking for "pyproject.toml", return fake one
+        if arg and "pyproject.toml" in arg:
+            return fake_pyproj
+        return Path(arg) if arg is not None else Path()
+
+    # Patch insert_header to capture calls
+    with (
+        patch.object(main_mod, "insert_header") as mock_insert,
+        patch.object(main_mod, "Path", side_effect=fake_path),
+    ):
+        main_mod.edit_header(dry_run=False)
+
+    mock_insert.assert_called_once()
+    called_file, called_header = mock_insert.call_args[0]
+    assert str(called_file).endswith("file.py")
+    assert "SPDX-License-Identifier" in called_header
+    assert "John" in called_header
+
+
+
 
 
 def test_main_function_current_version(capfd):
@@ -461,6 +602,26 @@ def test_main_function_current_version(capfd):
         # Capture printed output
         out, err = capfd.readouterr()
         assert "1.0.0" in out
+
+
+def test_main_function_dry_run_header(capfd):
+    """Test `main` case: valid version."""
+    # fake_version_file = Path("fake_pkg/__about__.py")
+
+    # Patch dependencies used inside main()
+    with (
+        # patch.object(main_mod, "edit_header") as mock_edit,
+        patch.object(main_mod, "insert_header") as mock_insert,
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
+        # Simulate CLI arguments: "header"
+        mock_args.return_value.command = "header"
+        mock_args.return_value.dry_run = True
+
+        # Run main()
+        main_mod.main()
+
+        mock_insert.assert_not_called()
 
 
 def test_main_function_bumps_and_commits(capfd):
@@ -546,6 +707,34 @@ def test_main_function_bumps_no_commit(capfd):
 
         # Assertions
         mock_write.assert_called_once_with(fake_version_file, "1.1.0")
+
+        # Capture printed output
+        out, err = capfd.readouterr()
+        assert "Bumped version in" in out
+        assert "1.0.0 → 1.1.0" in out
+
+
+def test_main_function_bumps_dry_run(capfd):
+    """Test `main` case: dry-run bump."""
+    fake_version_file = Path("fake_pkg/__about__.py")
+
+    # Patch dependencies used inside main()
+    with (
+        patch.object(main_mod, "find_version_file", return_value=fake_version_file),
+        patch.object(main_mod, "get_current_version", return_value="1.0.0"),
+        patch.object(main_mod, "write_version") as mock_write,
+        patch.object(main_mod, "parse_args") as mock_args,
+    ):
+        # Simulate CLI arguments: bump "minor" and commit
+        mock_args.return_value.command = "minor"
+        mock_args.return_value.commit = False
+        mock_args.return_value.dry_run = True
+
+        # Run main()
+        main_mod.main()
+
+        # Assertions
+        mock_write.assert_not_called()
 
         # Capture printed output
         out, err = capfd.readouterr()

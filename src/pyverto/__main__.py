@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # SPDX-FileCopyrightText: 2025-present phdenzel <phdenzel@gmail.com>
-# SPDX-FileNotice: Part of pyverto. Distributed as-is with no warranty.
+# SPDX-FileNotice: Part of pyverto
 # SPDX-License-Identifier: MIT
 """Version management for any Python project.
 
@@ -120,27 +120,28 @@ def edit_header(
     header_file: Path | None = None, header_text: str | None = None, dry_run: bool = False
 ):
     """Edit header of project files."""
+    pyproject = Path("pyproject.toml")
     if header_file is not None:
         header_text = header_file.read_text().strip()
     elif header_text is not None:
         header_text = header_text.strip()
     else:
-        pyproject = Path("pyproject.toml")
         if not pyproject.exists():
             raise SystemExit(
                 "pyproject.toml not found. "
                 "Use --header-file or --header-text flags to edit headers."
             )
         header_text = generate_default_header(pyproject)
-        project_name = get_project_name(pyproject.parent).replace("-", "_")
-        for py_file in Path().rglob("src/**/*.py") and Path().rglob(f"{project_name}/**/*.py"):
-            if py_file.name.startswith("."):
-                continue
-            if dry_run:
-                print(py_file)
-                print(header_text)
-            else:
-                insert_header(py_file, header_text)
+    project_name = get_project_name(pyproject.parent).replace("-", "_")
+    files = list(Path().rglob("src/**/*.py")) + list(Path().rglob(f"{project_name}/**/*.py"))
+    for py_file in files:
+        if py_file.name.startswith("."):
+            continue
+        if dry_run:
+            print(py_file)
+            print(header_text)
+        else:
+            insert_header(py_file, header_text)
 
 
 def main():
