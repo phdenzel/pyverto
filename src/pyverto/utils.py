@@ -69,20 +69,31 @@ def write_version(version_file: Path, new_version: str):
     version_file.write_text(new_content)
 
 
-def parse_version(v: str) -> tuple[int, int, int, str | None, int | None, int | None]:
+def parse_version(v: str) -> tuple[int, int, int, str | None, int | None, int | None, str, str]:
     """Parse into a version tuple (major, minor, micro, suffix, number, post).
 
     Example: 1.2.3-beta4+post2 -> (1, 2, 3, 'beta', 4, 2)
     """
-    base, post = (v.split("+", 1) + [None])[:2]
-    post_n = int(post[4:]) if post and post.startswith("post") else None
-    main, *suffix = re.split(r"-(alpha|beta|rc|dev)(\d*)", base)
-    major, minor, micro = map(int, main.split("."))
-    if suffix:
-        label, num = suffix[0], int(suffix[1] or 1)
-    else:
-        label, num = None, None
-    return major, minor, micro, label, num, post_n
+    re_full = re.compile(
+        r"^(?P<main>\d+\.\d+\.\d+)"
+        r"(?P<suffix_sep>[-\.]?)"
+        r"(?P<suffix>(alpha|beta|rc|dev))?"
+        r"(?P<suffix_num>\d*)"
+        r"(?P<post_sep>(\+|[-\.]))?"
+        r"(?P<post>post\d+)?$"
+    )
+    m = re_full.match(v)
+    if not m:
+        raise ValueError(f"Invalid version string: {v}")
+
+    major, minor, micro = map(int, m.group("main").split("."))
+    label = m.group("suffix")
+    num = int(m.group("suffix_num")) if m.group("suffix_num") else (1 if label else None)
+    post = m.group("post")
+    post_n = int(post[4:]) if post else None
+    pre_sep = m.group("suffix_sep") if m.group("suffix_sep") else ""
+    post_sep = m.group("post_sep") if m.group("post_sep") else ""
+    return major, minor, micro, label, num, post_n, pre_sep, post_sep
 
 
 def format_version(
@@ -92,11 +103,13 @@ def format_version(
     label: str | None = None,
     num: int | None = None,
     post: int | None = None,
+    pre_separator: str = "-",
+    post_separator: str = "+",
 ):
     """Format a version tuple string corresponding to the version tuple."""
     v = f"{major}.{minor}.{micro}"
     if label:
-        v += f"-{label}{num if num is not None else 0}"
+        v += f"{pre_separator}{label}{num if num is not None else 0}"
     if post:
-        v += f"+post{post}"
+        v += f"{post_separator}post{post}"
     return v
