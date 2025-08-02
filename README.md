@@ -38,14 +38,15 @@ Commands:
 ```
 Examples:
   - `pyverto minor`: 0.0.1 → 0.1.0
-  - `pyverto dev`: 0.1.0 → 0.1.0-dev0
+  - `pyverto dev`: 0.1.0 → 0.1.0.dev0
+  - `pyverto alpha`: 0.1.0.alpha1 → 0.1.0.alpha2
   - `pyverto pre --commit`: 0.1.0-dev0 → 0.1.0-rc0
   
   
 ## Usage in GitHub Actions
 
 ```yaml
-- uses: phdenzel/pyverto@v0.1.10
+- uses: phdenzel/pyverto@v0.2.0
   with:
     bump-type: "minor"
     ref: ${{ github.base_ref }}
