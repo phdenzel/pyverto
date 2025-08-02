@@ -89,16 +89,25 @@ def test_write_version_updates_file(temp_version_file):
 @pytest.mark.parametrize(
     "v,expected",
     [
-        ("1.2.3", (1, 2, 3, None, None, None)),
-        ("1.2.3-alpha1", (1, 2, 3, "alpha", 1, None)),
-        ("1.2.3-beta4+post2", (1, 2, 3, "beta", 4, 2)),
-        ("1.0.0-rc", (1, 0, 0, "rc", 1, None)),
-        ("1.0.0-dev5", (1, 0, 0, "dev", 5, None)),
+        ("1.2.3", (1, 2, 3, None, None, None, "", "")),
+        ("1.2.3-alpha1", (1, 2, 3, "alpha", 1, None, "-", "")),
+        ("1.2.3-beta4+post2", (1, 2, 3, "beta", 4, 2, "-", "+")),
+        ("1.0.0-rc", (1, 0, 0, "rc", 1, None, "-", "")),
+        ("1.0.0-dev5", (1, 0, 0, "dev", 5, None, "-", "")),
+        ("1.0.3.dev2", (1, 0, 3, "dev", 2, None, ".", "")),
+        ("1.0.3dev2.post1", (1, 0, 3, "dev", 2, 1, "", ".")),
     ],
 )
 def test_parse_version(v, expected):
     """Test `parse_version` for various inputs."""
-    assert utils.parse_version(v) == expected
+    out = utils.parse_version(v)
+    assert out == expected
+
+
+def test_parse_invalid_version():
+    """Test `parse_version` case: ValueError."""
+    with pytest.raises(ValueError):
+        utils.parse_version("Hello World!")
 
 
 def test_format_version_all_fields():
@@ -141,15 +150,20 @@ def test_parse_args_without_commit(monkeypatch):
         ("major", "1.2.3", "2.0.0"),
         ("minor", "1.2.3", "1.3.0"),
         ("micro", "1.2.3", "1.2.4"),
-        ("alpha", "1.2.3", "1.2.3-alpha0"),
+        ("alpha", "1.2.3", "1.2.3.alpha0"),
         ("alpha", "1.2.3-alpha0", "1.2.3-alpha1"),
+        ("alpha", "1.2.3.alpha1", "1.2.3.alpha2"),
         ("beta", "1.2.3-beta0", "1.2.3-beta1"),
-        ("pre", "1.2.3", "1.2.3-rc0"),
+        ("pre", "1.2.3", "1.2.3.rc0"),
         ("pre", "1.2.3-rc0", "1.2.3-rc1"),
-        ("rev", "1.2.3", "1.2.3+post1"),
+        ("rev", "1.2.3", "1.2.3-post1"),
         ("rev", "1.2.3+post2", "1.2.3+post3"),
-        ("dev", "1.2.3", "1.2.3-dev0"),
+        ("dev", "1.2.3", "1.2.3.dev0"),
         ("dev", "1.2.3-dev0", "1.2.3-dev1"),
+        ("dev", "1.2.3.dev1", "1.2.3.dev2"),
+        ("dev", "1.2.3dev0", "1.2.3dev1"),
+        ("rev", "1.2.3.dev0", "1.2.3.dev0-post1"),
+        ("rev", "1.2.3.dev0-post1", "1.2.3.dev0-post2"),
     ],
 )
 def test_bump_variants(cmd, current, expected):

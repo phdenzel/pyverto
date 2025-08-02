@@ -87,9 +87,18 @@ def bump(command: str, current_version: str):
         command: The manner how the version is incremented.
         current_version: Version string to be incremented.
     """
-    major, minor, micro, label, num, post = parse_version(current_version)
+    major, minor, micro, label, num, post, pre_sep, post_sep = parse_version(current_version)
     if command == "version":
-        return format_version(major, minor, micro, label, num, post)
+        return format_version(
+            major,
+            minor,
+            micro,
+            label,
+            num,
+            post,
+            pre_separator=pre_sep,
+            post_separator=post_sep,
+        )
     if command == "release":
         return format_version(major, minor, micro)
     if command == "major":
@@ -104,15 +113,40 @@ def bump(command: str, current_version: str):
             num = (num or 0) + 1
         else:
             num = 0
-        return format_version(major, minor, micro, stage, num)
+        return format_version(
+            major,
+            minor,
+            micro,
+            stage,
+            num,
+            pre_separator=pre_sep
+            if any([k in current_version for k in ["alpha", "beta", "pre", "rc"]])
+            else ".",
+        )
     if command == "rev":
-        return format_version(major, minor, micro, label, num, (post or 0) + 1)
+        return format_version(
+            major,
+            minor,
+            micro,
+            label,
+            num,
+            (post or 0) + 1,
+            pre_separator=pre_sep,
+            post_separator=post_sep if post else "-",
+        )
     if command == "dev":
         if label == "dev":
             num = (num or 0) + 1
         else:
             num = 0
-        return format_version(major, minor, micro, "dev", num)
+        return format_version(
+            major,
+            minor,
+            micro,
+            "dev",
+            num,
+            pre_separator=pre_sep if "dev" in current_version else ".",
+        )
     raise ValueError(f"Unknown command: {command}")
 
 
