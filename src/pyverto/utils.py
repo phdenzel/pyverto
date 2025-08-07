@@ -9,7 +9,7 @@ from pyverto.regexp import VERSION_RE
 
 
 def load_tomllib():
-    """Return a tomllib-compatible module (fallback for Python 3.10 is tomli)"""
+    """Return a tomllib-compatible module (fallback for Python 3.10 is tomli)."""
     try:
         import tomllib
 

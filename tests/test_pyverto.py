@@ -292,7 +292,7 @@ def test_load_tomllib_raises_if_both_missing(monkeypatch):
 
 
 def test_project_name_from_pyproject(tmp_path):
-    """Test `get_project_name` case: pyproject.toml"""
+    """Test `get_project_name` case: pyproject.toml."""
     pyproj = tmp_path / "pyproject.toml"
     pyproj.write_text(
         textwrap.dedent("""
@@ -304,7 +304,7 @@ def test_project_name_from_pyproject(tmp_path):
 
 
 def test_project_name_from_setup_cfg_instead_pyproject(tmp_path):
-    """Test `get_project_name` case: setup.cfg"""
+    """Test `get_project_name` case: setup.cfg."""
     pyproj = tmp_path / "pyproject.toml"
     pyproj.write_text(
         textwrap.dedent("""
@@ -323,7 +323,7 @@ def test_project_name_from_setup_cfg_instead_pyproject(tmp_path):
 
 
 def test_project_name_from_setup_cfg(tmp_path):
-    """Test `get_project_name` case: setup.cfg"""
+    """Test `get_project_name` case: setup.cfg."""
     setup_cfg = tmp_path / "setup.cfg"
     setup_cfg.write_text(
         textwrap.dedent("""
@@ -335,7 +335,7 @@ def test_project_name_from_setup_cfg(tmp_path):
 
 
 def test_project_name_from_src_package_instead_setup_cfg(tmp_path):
-    """Test `get_project_name` case: src/**"""
+    """Test `get_project_name` case: src/**."""
     setup_cfg = tmp_path / "setup.cfg"
     setup_cfg.write_text(
         textwrap.dedent("""
@@ -351,7 +351,7 @@ def test_project_name_from_src_package_instead_setup_cfg(tmp_path):
 
 
 def test_project_name_from_flat_package(tmp_path):
-    """Test `get_project_name` case: src/flatpkg"""
+    """Test `get_project_name` case: src/flatpkg."""
     pkg_dir = tmp_path / "flatpkg"
     pkg_dir.mkdir()
     (pkg_dir / "__init__.py").write_text("# flat package")
@@ -359,7 +359,7 @@ def test_project_name_from_flat_package(tmp_path):
 
 
 def test_project_name_skips_tests_docs_examples(tmp_path):
-    """Test `get_project_name` case: actualpkg/"""
+    """Test `get_project_name` case: actualpkg/."""
     # These should be ignored as possible names
     for name in ["tests", "docs", "examples"]:
         d = tmp_path / name
@@ -374,7 +374,7 @@ def test_project_name_skips_tests_docs_examples(tmp_path):
 
 
 def test_project_name_from_git(monkeypatch, tmp_path):
-    """Test `get_project_name` case: git repo"""
+    """Test `get_project_name` case: git repo."""
     repo_mock = MagicMock()
     repo_dir = tmp_path / "reponame"
     repo_dir.mkdir()
@@ -390,7 +390,7 @@ def test_project_name_from_git(monkeypatch, tmp_path):
 
 
 def test_project_name_defaults_to_dir_name(monkeypatch, tmp_path):
-    """Test `get_project_name` case: base_path (last resort)"""
+    """Test `get_project_name` case: base_path (last resort)."""
     # Simulate no metadata and no git repo
     monkeypatch.setattr("git.Repo", MagicMock(side_effect=Exception))
     assert header.get_project_name(tmp_path) == tmp_path.name

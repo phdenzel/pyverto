@@ -6,8 +6,7 @@ from unittest.mock import patch
 
 @pytest.fixture(autouse=True)
 def patch_rglob_to_tmp(tmp_path):
-    """Auto-patch Path.rglob so that any test only searches within tmp_path (not the real repo).
-    """
+    """Auto-patch Path.rglob to only search within tmp_path (not the real repo)."""
     original_rglob = Path.rglob
 
     def fake_rglob(self, pattern):
