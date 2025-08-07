@@ -75,8 +75,18 @@ def parse_args():
         type=str,
         help="Optional text containing a custom header to insert into project files.",
     )
+    parser.add_argument(
+        "-d",
+        "--target-dirs",
+        "--targets",
+        action="append",
+        type=Path,
+        default=["{project_name}", Path("src")],
+        help="Project directories where to look for python files",
+    )
 
     args = parser.parse_args()
+    print(args)
     return args
 
 
@@ -151,7 +161,10 @@ def bump(command: str, current_version: str):
 
 
 def edit_header(
-    header_file: Path | None = None, header_text: str | None = None, dry_run: bool = False
+    header_file: Path | None = None,
+    header_text: str | None = None,
+    target_dirs: list[Path | str] = ["src"],
+    dry_run: bool = False,
 ):
     """Edit header of project files."""
     pyproject = Path("pyproject.toml")
@@ -167,8 +180,12 @@ def edit_header(
             )
         header_text = generate_default_header(pyproject)
     project_name = get_project_name(pyproject.parent).replace("-", "_")
-    files = list(Path().rglob("src/**/*.py")) + list(Path().rglob(f"{project_name}/**/*.py"))
-    for py_file in files:
+    target_dirs = [
+        Path(p.format(project_name=project_name)) if p == "{project_name}" else p
+        for p in target_dirs
+    ]
+    target_files = [f for d in target_dirs for f in d.rglob("**/*.py")]
+    for py_file in target_files:
         if py_file.name.startswith("."):
             continue
         if dry_run:
@@ -186,7 +203,7 @@ def main():
         raise SystemExit("Error: Could not locate a file with __version__.")
     current_version = get_current_version(version_file)
     if args.command == "header":
-        edit_header(args.header_file, dry_run=args.dry_run)
+        edit_header(args.header_file, target_dirs=args.target_dirs, dry_run=args.dry_run)
     elif args.command == "version":
         print(current_version)
     else:
